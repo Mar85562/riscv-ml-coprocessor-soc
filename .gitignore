@@ -1,0 +1,13 @@
+*.vcd
+*.out
+*.log
+*.gds
+*.lef
+*.def
+*.magic
+*.html
+__pycache__/
+*.pyc
+openlane/*/runs/
+openlane/*/results/
+
