@@ -21,3 +21,22 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 - Verilog, Icarus Verilog, GTKWave
 - Yosys, OpenLane, Magic VLSI
 - Python (for optional scripting/testing)
+
+---
+
+## ✅ Modules Implemented
+
+| Module    | Description                      | Status   |
+|-----------|----------------------------------|----------|
+| `pc.v`    | Program Counter (PC)             | ✅ Tested in Vivado & iverilog |
+
+---
+
+## ▶️ Running Simulations (Linux)
+
+```bash
+cd testbench
+iverilog -o pc_test pc_tb.v ../rtl/pc.v
+./pc_test
+gtkwave pc.vcd
+

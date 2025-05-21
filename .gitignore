@@ -1,13 +1,37 @@
+# Simulation outputs
 *.vcd
-*.out
 *.log
+*.out
+*.vvp
+*.bin
+*_test
+
+# ASIC flow outputs
 *.gds
 *.lef
 *.def
 *.magic
 *.html
-__pycache__/
-*.pyc
+
+# OpenLane-generated directories
 openlane/*/runs/
 openlane/*/results/
 
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Vivado (if needed)
+*.jou
+*.wdb
+*.xpr
+*.webtalk
+*.cache/
+*.hw/
+*.runs/
+*.sim/
+*.srcs/
+*.ip_user_files/
+
+# Misc
+*~
