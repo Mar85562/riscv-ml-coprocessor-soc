@@ -41,6 +41,7 @@ cd testbench
 iverilog -o pc_test pc_tb.v ../rtl/pc.v
 ./pc_test
 gtkwave pc.vcd
+```
 
 ### Simulate the Instruction Memory module:
 ```bash
@@ -48,3 +49,4 @@ cd testbench
 iverilog -o instr_mem_test instr_mem_tb.v ../rtl/instr_mem.v
 ./instr_mem_test
 gtkwave instr_mem.vcd
+```
