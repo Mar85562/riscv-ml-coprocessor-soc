@@ -30,6 +30,7 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 |---------------|------------------------------------|----------------------------------|
 | `pc.v`        | Program Counter                    | ✅ Tested in Vivado & iverilog   |
 | `instr_mem.v` | Instruction Memory (preloaded ROM) | ✅ Tested in Vivado & iverilog   |
+| `regfile.v`   | 32-register file with dual-read, single-write port | ✅ Tested in Vivado & iverilog |
 
 ---
 
@@ -49,4 +50,12 @@ cd testbench
 iverilog -o instr_mem_test instr_mem_tb.v ../rtl/instr_mem.v
 ./instr_mem_test
 gtkwave instr_mem.vcd
+```
+
+### 🧪 Simulate the Register File Module
+```bash
+cd testbench
+iverilog -o regfile_test regfile_tb.v ../rtl/regfile.v
+./regfile_test
+gtkwave regfile.vcd
 ```
