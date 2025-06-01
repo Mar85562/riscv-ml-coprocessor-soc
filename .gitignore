@@ -6,8 +6,6 @@
 *.bin
 *_test
 
-# Synthesis outputs
-instr_mem_test
 
 # ASIC flow outputs
 *.gds
