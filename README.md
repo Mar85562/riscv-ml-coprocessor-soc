@@ -33,6 +33,7 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `regfile.v`   | 32-register file with dual-read, single-write port | ✅ Tested in Vivado & iverilog |
 | `alu.v`    | Arithmetic Logic Unit (ALU)     | ✅ Tested in Vivado & iverilog |
 | `alu_control.v` | ALU Control Decoder | ✅ Tested in Vivado & iverilog |
+| `control.v` | Main Control Unit (Opcode decoder) | ✅ Tested in Vivado & iverilog |
 ---
 
 ## ▶️ Running Simulations (Linux)
@@ -74,4 +75,11 @@ cd testbench
 iverilog -g2012 -o alu_control_test alu_control_tb.sv ../rtl/alu_control.v
 ./alu_control_test > alu_control_output.txt
 gtkwave alu_control.vcd
+```
+### ▶️ Simulate the Main Control Unit Module
+```bash
+cd testbench
+iverilog -g2012 -o control_test control_tb.sv ../rtl/control.v
+./control_test > control_output.txt
+gtkwave control.vcd
 ```
