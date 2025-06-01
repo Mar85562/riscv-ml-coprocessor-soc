@@ -35,6 +35,7 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `alu_control.v` | ALU Control Decoder | ✅ Tested in Vivado & iverilog |
 | `control.v` | Main Control Unit (Opcode decoder) | ✅ Tested in Vivado & iverilog |
 | `imm_gen.v` | Immediate Generator (I/S/B/U/J types) | ✅ Tested in Vivado & iverilog |
+| `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
 ---
 
 ## ▶️ Running Simulations (Linux)
@@ -89,4 +90,11 @@ gtkwave control.vcd
 cd testbench
 iverilog -g2012 -o imm_gen_test imm_gen_tb.sv ../rtl/imm_gen.v
 ./imm_gen_test
+```
+### ▶️ Simulate Decoder Module
+```bash
+cd testbench
+iverilog -g2012 -o decoder_test decoder_tb.sv ../rtl/decoder.v
+./decoder_test > decoder_output.txt
+gtkwave decoder.vcd
 ```
