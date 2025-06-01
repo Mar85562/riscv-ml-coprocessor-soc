@@ -5,7 +5,7 @@
 *.vvp
 *.bin
 *_test
-
+*_output.txt
 
 # ASIC flow outputs
 *.gds
