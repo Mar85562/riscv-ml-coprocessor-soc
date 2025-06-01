@@ -1,0 +1,33 @@
+VCD info: dumpfile alu.vcd opened for output.
+Operation: AND  | a = f0f0f0f0 | b = f0f0f0f | result = 0 | zero = 1
+✅ PASS
+---
+Operation: OR   | a = f0f0f0f0 | b = f0f0f0f | result = ffffffff | zero = 0
+✅ PASS
+---
+Operation: ADD  | a = a | b = 5 | result = f | zero = 0
+✅ PASS
+---
+Operation: SUB  | a = a | b = a | result = 0 | zero = 1
+✅ PASS
+---
+Operation: SLT  | a = ffffffff | b = 5 | result = 1 | zero = 0
+✅ PASS
+---
+Operation: SLTU | a = 5 | b = a | result = 1 | zero = 0
+✅ PASS
+---
+Operation: XOR  | a = aaaa5555 | b = 12345678 | result = b89e032d | zero = 0
+✅ PASS
+---
+Operation: SLL  | a = 1 | b = 4 | result = 10 | zero = 0
+✅ PASS
+---
+Operation: SRL  | a = 10 | b = 2 | result = 4 | zero = 0
+✅ PASS
+---
+Operation: SRA  | a = fffffff0 | b = 2 | result = fffffffc | zero = 0
+✅ PASS
+---
+✅ ALU testing complete.
+alu_tb.sv:78: $finish called at 100000 (1ps)

@@ -31,12 +31,13 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `pc.v`        | Program Counter                    | ✅ Tested in Vivado & iverilog   |
 | `instr_mem.v` | Instruction Memory (preloaded ROM) | ✅ Tested in Vivado & iverilog   |
 | `regfile.v`   | 32-register file with dual-read, single-write port | ✅ Tested in Vivado & iverilog |
+| `alu.v`    | Arithmetic Logic Unit (ALU)     | ✅ Tested in Vivado & iverilog |
 
 ---
 
 ## ▶️ Running Simulations (Linux)
 
-### Simulate the PC module:
+### ▶️ Simulate the PC module:
 ```bash
 cd testbench
 iverilog -o pc_test pc_tb.v ../rtl/pc.v
@@ -44,7 +45,7 @@ iverilog -o pc_test pc_tb.v ../rtl/pc.v
 gtkwave pc.vcd
 ```
 
-### Simulate the Instruction Memory module:
+### ▶️ Simulate the Instruction Memory module
 ```bash
 cd testbench
 iverilog -o instr_mem_test instr_mem_tb.v ../rtl/instr_mem.v
@@ -52,10 +53,18 @@ iverilog -o instr_mem_test instr_mem_tb.v ../rtl/instr_mem.v
 gtkwave instr_mem.vcd
 ```
 
-### 🧪 Simulate the Register File Module
+### ▶️ Simulate the Register File Module
 ```bash
 cd testbench
 iverilog -o regfile_test regfile_tb.v ../rtl/regfile.v
 ./regfile_test
 gtkwave regfile.vcd
+```
+### ▶️ Simulate the ALU Module
+
+```bash
+cd testbench
+iverilog -g2012 -o alu_test alu_tb.sv ../rtl/alu.v
+./alu_test > alu_output.txt
+gtkwave alu.vcd
 ```
