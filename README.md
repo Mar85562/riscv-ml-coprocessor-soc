@@ -34,6 +34,7 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `alu.v`    | Arithmetic Logic Unit (ALU)     | ✅ Tested in Vivado & iverilog |
 | `alu_control.v` | ALU Control Decoder | ✅ Tested in Vivado & iverilog |
 | `control.v` | Main Control Unit (Opcode decoder) | ✅ Tested in Vivado & iverilog |
+| `imm_gen.v` | Immediate Generator (I/S/B/U/J types) | ✅ Tested in Vivado & iverilog |
 ---
 
 ## ▶️ Running Simulations (Linux)
@@ -82,4 +83,10 @@ cd testbench
 iverilog -g2012 -o control_test control_tb.sv ../rtl/control.v
 ./control_test > control_output.txt
 gtkwave control.vcd
+```
+### ▶️ Simulate the Immediate Generator Module
+```bash
+cd testbench
+iverilog -g2012 -o imm_gen_test imm_gen_tb.sv ../rtl/imm_gen.v
+./imm_gen_test
 ```
