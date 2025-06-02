@@ -1,8 +1,27 @@
+## Work in Progress
+This project is under active development. The following components are currently in progress:
+
+| Module       | Description                                   | Status         |
+| ------------ | --------------------------------------------- | -------------- |
+| `cpu_top.v`  | Top-level CPU datapath integration            | 🚧 In progress |
+| `data_mem.v` | Data Memory block for loads and stores        | 🔜 Not started |
+| `ml_accel.v` | ML Coprocessor (memory-mapped)                | 🔜 Not started |
+| `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | 🔜 Not started |
+
+
 # RISC-V + ML Coprocessor SoC
 
 A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped ML accelerator coprocessor. This project is built in Verilog and goes through the full ASIC flow using open-source tools.
 
 ---
+
+### 🧩 SoC Top-Level Diagram
+
+![SoC Top Diagram](doc/soc_top_block_diagram.png)
+
+### 🧭 CPU Top-Level Block Diagram
+
+![CPU Top Diagram](doc/cpu_top_block_diagram.png)
 
 ## 📁 Folder Structure
 
@@ -23,6 +42,10 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 - Python (for optional scripting/testing)
 
 ---
+
+### 🧭 CPU Top-Level Block Diagram
+
+![CPU Top Diagram](doc/cpu_top_block_diagram.png)
 
 ## ✅ Modules Implemented
 
