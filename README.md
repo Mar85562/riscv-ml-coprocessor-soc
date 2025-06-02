@@ -43,10 +43,6 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 
 ---
 
-### 🧭 CPU Top-Level Block Diagram
-
-![CPU Top Diagram](doc/cpu_top_block_diagram.png)
-
 ## ✅ Modules Implemented
 
 | Module        | Description                        | Status                           |
