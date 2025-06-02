@@ -156,4 +156,4 @@ iverilog -g2012 -o cpu_test \
     testbench/cpu_top_tb.sv \
     rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v \
     rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
-    ```
+```
