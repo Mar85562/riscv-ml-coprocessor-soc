@@ -1,7 +1,7 @@
 module cpu_top(
     input clk,
     input rst
-    // Other inputs will be adder later
+    // Other inputs will be added later
     );
     
     
