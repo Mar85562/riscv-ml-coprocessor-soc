@@ -3,8 +3,8 @@ This project is under active development. The following components are currently
 
 | Module       | Description                                   | Status         |
 | ------------ | --------------------------------------------- | -------------- |
-| `cpu_top.v`  | Top-level CPU datapath integration            | 🚧 In progress |
-| `data_mem.v` | Data Memory block for loads and stores        | 🔜 Not started |
+| `cpu_top.v`    | Top-level CPU datapath integration            | 🧪 Integrated & Functionally Testing     |
+| `data_mem.v`  | Data Memory block for loads and stores        | ✅ Tested       |
 | `ml_accel.v` | ML Coprocessor (memory-mapped)                | 🔜 Not started |
 | `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | 🔜 Not started |
 
@@ -59,7 +59,34 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `control.v` | Main Control Unit (Opcode decoder) | ✅ Tested in Vivado & iverilog |
 | `imm_gen.v` | Immediate Generator (I/S/B/U/J types) | ✅ Tested in Vivado & iverilog |
 | `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
+| `data_mem.v`  | Read-write Data Memory (word-aligned) | ✅ Tested with SystemVerilog    |
+| `cpu_top.v`    | Single-cycle CPU (full datapath)    | 🧪 Integrated, testing `beq`, memory ops |
+
+## 🐞 Known Issues
+
+- ✅ BEQ now correctly calculates the branch offset (imm is left-shifted).
+- ⚠️ Data memory (`mem[5]`) not always visible if PC wraps due to reset — might be due to testbench reset signals.
+- 🚧 Full program execution is ongoing — `x9` is correctly skipped after branch, but more corner cases still need testing (e.g., SLT, shifts).
+- 🔍 No test coverage yet for edge ALU ops like SRA/SRL/SLL or unsigned comparisons.
+
 ---
+
+## 📜 Instruction Log (Test Program in `instr_mem.v`)
+
+| PC  | Instruction        | Assembly         | Description                             |
+|-----|--------------------|------------------|-----------------------------------------|
+| 0   | `0x00500093`       | `addi x1, x0, 5` | x1 = 5                                  |
+| 4   | `0x00A00113`       | `addi x2, x0, 10`| x2 = 10                                 |
+| 8   | `0x002081B3`       | `add x3, x1, x2` | x3 = x1 + x2 = 15                        |
+| 12  | `0x40110233`       | `sub x4, x2, x1` | x4 = x2 - x1 = 5                         |
+| 16  | `0x0020A2B3`       | `and x5, x1, x2` | x5 = x1 & x2 = 0                         |
+| 20  | `0x0020B333`       | `or x6, x1, x2`  | x6 = x1 | x2 = 15                        |
+| 24  | `0x0020C3B3`       | `xor x7, x1, x2` | x7 = x1 ^ x2 = 15                        |
+| 28  | `0x0070A023`       | `sw x7, 0(x1)`   | mem[x1+0] = x7 = 15                      |
+| 32  | `0x0000A403`       | `lw x8, 0(x1)`   | x8 = mem[x1+0] → should get 15          |
+| 36  | `0x00410663`       | `beq x2, x4, +8` | Branch if x2 == x4 → skip next if false |
+| 40  | `0x06300493`       | `addi x9, x0, 99`| x9 = 99 (should be skipped if branch)   |
+| 44  | `0x0010A533`       | `add x10, x1, x1`| x10 = x1 + x1 = 10                       |
 
 ## ▶️ Running Simulations (Linux)
 
@@ -121,3 +148,16 @@ iverilog -g2012 -o decoder_test decoder_tb.sv ../rtl/decoder.v
 ./decoder_test > decoder_output.txt
 gtkwave decoder.vcd
 ```
+### ▶️ Simulate Data Memory Module
+```bash
+cd testbench
+iverilog -g2012 -o data_mem_test data_mem_tb.sv ../rtl/data_mem.v
+./data_mem_test
+```
+### ▶️ Simulate the CPU Top Module
+```bash
+iverilog -g2012 -o cpu_test \
+    testbench/cpu_top_tb.sv \
+    rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v \
+    rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
+    ```
