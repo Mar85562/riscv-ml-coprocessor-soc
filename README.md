@@ -43,10 +43,6 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 
 ---
 
-### 🧭 CPU Top-Level Block Diagram
-
-![CPU Top Diagram](doc/cpu_top_block_diagram.png)
-
 ## ✅ Modules Implemented
 
 | Module        | Description                        | Status                           |
@@ -148,16 +144,3 @@ iverilog -g2012 -o decoder_test decoder_tb.sv ../rtl/decoder.v
 ./decoder_test > decoder_output.txt
 gtkwave decoder.vcd
 ```
-### ▶️ Simulate Data Memory Module
-```bash
-cd testbench
-iverilog -g2012 -o data_mem_test data_mem_tb.sv ../rtl/data_mem.v
-./data_mem_test
-```
-### ▶️ Simulate the CPU Top Module
-```bash
-iverilog -g2012 -o cpu_test \
-    testbench/cpu_top_tb.sv \
-    rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v \
-    rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
-    ```
