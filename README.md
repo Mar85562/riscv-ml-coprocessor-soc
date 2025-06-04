@@ -77,7 +77,7 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 | `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
 | `data_mem.v`  | Read-write Data Memory (word-aligned) | ✅ Tested with SystemVerilog    |
 | `cpu_top.v`    | Single-cycle CPU (full datapath)    | 🧪 Integrated, testing `beq`, memory ops |
-| `ml_accel.v`  | 4-element dot-product ML accelerator coprocessor | ✅ Tested using SystemVerilog |
+| `ml_accel.v`  | 4-element dot-product ML accelerator coprocessor | ✅ Tested in Vivado & iverilog |
 
 
 ## 🐞 Known Issues
