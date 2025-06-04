@@ -5,7 +5,7 @@ This project is under active development. The following components are currently
 | ------------ | --------------------------------------------- | -------------- |
 | `cpu_top.v`    | Top-level CPU datapath integration            | 🧪 Integrated & Functionally Testing     |
 | `data_mem.v`  | Data Memory block for loads and stores        | ✅ Tested       |
-| `ml_accel.v` | ML Coprocessor (memory-mapped)                | 🔜 Not started |
+| `ml_accel.v` | ML Coprocessor (memory-mapped)                | ✅ Tested w/ SV testbench |
 | `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | 🔜 Not started |
 
 
@@ -22,6 +22,26 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 ### 🧭 CPU Top-Level Block Diagram
 
 ![CPU Top Diagram](doc/cpu_top_block_diagram.png)
+
+### 🧠 ML Accelerator Coprocessor
+
+The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator** that computes the dot product of two 4-element vectors:
+
+`Result = A[0]*B[0] + A[1]*B[1] + A[2]*B[2] + A[3]*B[3]`
+
+
+- Accessible via memory-mapped registers (offsets `0x00–0x24`)
+- Activated by a write to the control register at `0x20`
+- Computation is performed in hardware in a single clock cycle
+- Result is read from address `0x24`, with a `done` flag
+
+**Why use a coprocessor?**
+
+- Offloads repeated or parallelizable computations from the CPU
+- Enables higher throughput in ML workloads (e.g., vector math)
+- Demonstrates modular SoC design with extensible accelerators
+
+
 
 ## 📁 Folder Structure
 
@@ -57,6 +77,8 @@ A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped
 | `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
 | `data_mem.v`  | Read-write Data Memory (word-aligned) | ✅ Tested with SystemVerilog    |
 | `cpu_top.v`    | Single-cycle CPU (full datapath)    | 🧪 Integrated, testing `beq`, memory ops |
+| `ml_accel.v`  | 4-element dot-product ML accelerator coprocessor | ✅ Tested using SystemVerilog |
+
 
 ## 🐞 Known Issues
 
@@ -156,4 +178,11 @@ iverilog -g2012 -o cpu_test \
     testbench/cpu_top_tb.sv \
     rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v \
     rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
+```
+### ▶️ Simulate the ML Accelerator Module
+```bash
+cd testbench
+iverilog -g2012 -o ml_accel_test ml_accel_tb.sv ../rtl/ml_accel.v
+./ml_accel_test
+gtkwave ml_accel.vcd
 ```
