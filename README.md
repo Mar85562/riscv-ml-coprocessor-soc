@@ -187,6 +187,9 @@ cd testbench
 iverilog -g2012 -o data_mem_test data_mem_tb.sv ../rtl/data_mem.v
 ./data_mem_test
 ```
+
+> 💡 Tip: You can observe memory effects via `read_data` signal from `data_mem.v` instead of direct access to the `memory` array due to simulation scope limitations.
+
 ### ▶️ Simulate the CPU Top Module
 ```bash
 iverilog -g2012 -o cpu_test \
@@ -202,4 +205,3 @@ iverilog -g2012 -o ml_accel_test ml_accel_tb.sv ../rtl/ml_accel.v
 gtkwave ml_accel.vcd
 ```
 
-> 💡 Tip: You can observe memory effects via `read_data` signal from `data_mem.v` instead of direct access to the `memory` array due to simulation scope limitations.
