@@ -1,6 +1,8 @@
 ## Work in Progress
 This project is under active development. The following components are currently in progress:
 
+| Module       | Desciption                                    | Status                                         |
+---------------|-----------------------------------------------|------------------------------------------------| 
 | `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | All components completed; Awaiting integration |
 
 
@@ -81,13 +83,29 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 - ❌ `jal` instruction not yet implemented in `control.v` or tested.
 
 ## ✅ Fixed Issues
+- ✅ Full program execution verified — final testbench confirms ALU, branch, memory, and comparison behavior.
 - ✅ BEQ now correctly branches based on `zero` flag and tested with skip logic.
 - ✅ Memory write/read verified using `lw` into x8 and comparing regfile output.
 - ✅ SLT and SLTU functionality confirmed in step 5 of testbench.
 
 ---
 
-## 📜 Instruction Log (Test Program in `instr_mem.v`)
+## 🧪 CPU Testbenches
+
+Two main testbenches were used to verify `cpu_top.v`:
+
+### 1️⃣ Step-by-Step Unit Testbench (Commented Out)
+
+- Located in `cpu_top_tb.sv` (commented out at top of file)
+- Contains structured testing for:
+  - ADDI + ADD
+  - ALU ops: SUB, AND, OR, XOR
+  - Memory ops: SW + LW
+  - Branching: BEQ taken / not taken
+  - Comparisons: SLT, SLTU, signed/unsigned logic
+- Displays each register’s output and compares it to expected values
+
+## 📜 Instruction Log (Test Program in `instr_mem.v`, commented out)
 
 | PC  | Instruction        | Assembly         | Description                             |
 |-----|--------------------|------------------|-----------------------------------------|
@@ -110,6 +128,38 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 | 76  | `0x0107B8B3`       | `sltu x17, x15, x16`| x17 = (unsigned -1 < 1) = 1           |
 | 80  | `0x00F83933`       | `sltu x18, x16, x15`| x18 = (unsigned 1 < -1) = 0           |
 
+### 2️⃣ Final Full-Flow Testbench
+
+- Same file: `cpu_top_tb.sv` (active code at bottom)
+- Executes a realistic instruction sequence:
+  ```assembly
+  addi x1, x0, 5
+  addi x2, x0, 10
+  add  x3, x1, x2
+  slt  x4, x1, x2
+  sltu x5, x2, x1
+  sw   x3, 0(x0)
+  lw   x6, 0(x0)
+  beq  x1, x1, +8  // skips next
+  addi x7, x0, 99  // should be skipped
+  addi x8, x0, 42
+
+
+## 📜 Instruction Log (Test Program in `instr_mem.v`)
+
+| PC  | Instruction        | Assembly            | Description                                 |
+|-----|--------------------|---------------------|---------------------------------------------|
+| 0   | `0x00500093`       | `addi x1, x0, 5`    | x1 = 5                                      |
+| 4   | `0x00A00113`       | `addi x2, x0, 10`   | x2 = 10                                     |
+| 8   | `0x002081B3`       | `add x3, x1, x2`    | x3 = x1 + x2 = 15                            |
+| 12  | `0x0020A233`       | `slt x4, x1, x2`    | x4 = (5 < 10) = 1                            |
+| 16  | `0x001132B3`       | `sltu x5, x2, x1`   | x5 = (10 < 5) = 0 (unsigned)                 |
+| 20  | `0x00302023`       | `sw x3, 0(x0)`      | mem[0] = x3 = 15                             |
+| 24  | `0x00002303`       | `lw x6, 0(x0)`      | x6 = mem[0] = 15                             |
+| 28  | `0x00108463`       | `beq x1, x1, +8`    | Branch taken — skip next                    |
+| 32  | `0x06300393`       | `addi x7, x0, 99`   | x7 = 99 (skipped by branch)                 |
+| 36  | `0x02A00413`       | `addi x8, x0, 42`   | x8 = 42                                     |
+
 
 ## 🧪 Full CPU Test Program Coverage
 | Step | Instructions Tested                         | Status  |
@@ -118,7 +168,6 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 | 2    | `sub`, `and`, `or`, `xor`                    | ✅ PASS |
 | 3    | `sw`, `lw`                                   | ✅ PASS |
 | 4    | `beq` (branch skip behavior)                 | ✅ PASS |
-| 5    | `jal` (jump and link)                        | ❌ Skipped for now|
 | 6    | `slt`, `sltu` (signed/unsigned comparisons)  | ✅ PASS |
 
 ## ▶️ Running Simulations (Linux)
