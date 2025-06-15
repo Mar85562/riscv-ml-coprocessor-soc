@@ -105,7 +105,7 @@ Two main testbenches were used to verify `cpu_top.v`:
   - Comparisons: SLT, SLTU, signed/unsigned logic
 - Displays each register’s output and compares it to expected values
 
-## 📜 Instruction Log (Test Program in `instr_mem.v`, commented out)
+### 📜 Instruction Log for Step-by-Step (Test Program in `instr_mem.v`, commented out)
 
 | PC  | Instruction        | Assembly         | Description                             |
 |-----|--------------------|------------------|-----------------------------------------|
@@ -145,7 +145,7 @@ Two main testbenches were used to verify `cpu_top.v`:
   addi x8, x0, 42
 
 
-## 📜 Instruction Log (Test Program in `instr_mem.v`)
+### 📜 Instruction Log for FULL PROGRAM (Test Program in `instr_mem.v`)
 
 | PC  | Instruction        | Assembly            | Description                                 |
 |-----|--------------------|---------------------|---------------------------------------------|
