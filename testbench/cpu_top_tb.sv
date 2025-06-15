@@ -1,77 +1,150 @@
-`timescale 1ns / 1ps
+`timescale 1ns /1ps
 
 module cpu_top_tb;
 
-    logic clk, rst;
-
+    reg clk = 0;
+    reg rst = 1;
+    
+    // Instantiate DUT
     cpu_top dut (
         .clk(clk),
         .rst(rst)
     );
-
-    // Clock generation (10ns period)
+    
+    // Clock generation 
     always #5 clk = ~clk;
-
-    // VCD for waveform
+    
+    // VCD output
     initial begin
         $dumpfile("cpu_top.vcd");
         $dumpvars(0, cpu_top_tb);
     end
-
-    // Utility: register dump
-    task print_regs;
-        $display(
-            "x1=%0d x2=%0d x3=%0d x4=%0d x5=%0d x6=%0d x7=%0d x8=%0d x9=%0d x10=%0d | mem[5]=%0d",
-            dut.regfile_inst.regs[1],
-            dut.regfile_inst.regs[2],
-            dut.regfile_inst.regs[3],
-            dut.regfile_inst.regs[4],
-            dut.regfile_inst.regs[5],
-            dut.regfile_inst.regs[6],
-            dut.regfile_inst.regs[7],
-            dut.regfile_inst.regs[8],
-            dut.regfile_inst.regs[9],
-            dut.regfile_inst.regs[10],
-            dut.data_mem_inst.memory[5]
-        );
-    endtask
-
-    // Utility: branch debug print
-    task print_branch_debug;
-        $display("=== BRANCH DEBUG ===");
-        $display("  rs1_data       = %0d", dut.rs1_data);
-        $display("  rs2_data       = %0d", dut.rs2_data);
-        $display("  ALU result     = %0d", dut.alu_result);
-        $display("  Zero flag      = %0d", dut.zero);
-        $display("  Branch         = %0d", dut.branch);
-        $display("  is_branch_taken= %0d", dut.branch && dut.zero);
-        $display("====================");
-    endtask
-
-    // Simulation control
-    initial begin
-        clk = 0;
-        rst = 1;
-        $display("\n=== CPU Full Test Start ===");
+   
+            
+    initial begin        
+        // Deassert reset
         #10 rst = 0;
-
-        repeat (40) begin
-            @(posedge clk);
-            $display("\nCycle @ PC=%0d | Instr = %h", dut.pc_inst.pc_out, dut.instruction);
-            print_regs();
-            print_branch_debug();
-        end
-
-        $display("\n=== CPU Full Test End ===");
-
-        // Optional: pass/fail check
-        if (dut.regfile_inst.regs[10] == 10) begin
-            $display("TEST PASS ✅");
-        end else begin
-            $display("TEST FAIL ❌");
-        end
-
+        
+        
+        //STEP 1: Wait 3 instructions (addi, addi, add)
+         repeat (6) @(posedge clk); // Run 6 cycles = 3 instructions
+         
+         // Checking the results
+         $display("\n=== STEP 1: ADDI + ADD TEST ===");
+         $display("x1 = %0d | expected = 5", dut.regfile_inst.regs[1]);
+         $display("x2 = %0d | expected = 10", dut.regfile_inst.regs[2]);
+         $display("x3 = %0d | expected = 15", dut.regfile_inst.regs[3]);
+         
+         if (dut.regfile_inst.regs[1] == 5 && dut.regfile_inst.regs[2] == 10 && dut.regfile_inst.regs[3] == 15)
+            $display(" STEP 1 PASS\n");
+         else
+            $display(" STEP 2 FAIL\n");
+            
+        // STEP 2: SUB, AND, OR, XOR (4 instructions)
+        repeat (8) @(posedge clk); // 4 instructions x 2 cycles = 8 cycles
+        
+        $display("\n=== STEP 2: ALU Ops TEST ===");
+        $display("x4 (sub) = %0d | Expected = 5", dut.regfile_inst.regs[4]);
+        $display("x5 (and) = %0d | Expected = 0", dut.regfile_inst.regs[5]);
+        $display("x6 (or) = %0d | Expected = 15", dut.regfile_inst.regs[6]);
+        $display("x7 (xor) = %0d | Expected = 15", dut.regfile_inst.regs[7]);
+        
+        if (dut.regfile_inst.regs[4] == 5 &&
+            dut.regfile_inst.regs[5] == 0 &&
+            dut.regfile_inst.regs[6] == 15 &&
+            dut.regfile_inst.regs[7] == 15)
+            $display(" STEP 2 PASS\n");
+        else
+            $display(" STEP 2 FAIL\n");
+                                 
+    
+        
+        
+//         STEP 3: Memory Ops (SW, LW)
+        repeat (2) @(posedge clk); // 2 instructions
+        $display("\n== STEP 3: SW + LW TEST ===");
+        $display("x8     = %0d | expected = 15", dut.regfile_inst.regs[8]);
+        
+        
+        if (dut.regfile_inst.regs[8] == 15)
+            $display(" STEP 3 PASS \n");
+        else
+            $display(" STEP 3 FAIL \n");
+        
+        // Step 4: BEQ Part 1: Branch NOT taken
+        repeat (6) @(posedge clk); // 3 instructions
+        
+        $display("\n=== STEP 4.1: BEW Branch NOT Taken TEST ===");
+        $display("x1 = %0d", dut.regfile_inst.regs[1]);
+        $display("x2 = %0d", dut.regfile_inst.regs[2]);
+        $display("x9 = %0d | expected = 99", dut.regfile_inst.regs[9]);
+        $display("x10 = %0d | expected = 10", dut.regfile_inst.regs[10]);
+        
+        if (dut.regfile_inst.regs[9] == 99 && dut.regfile_inst.regs[10] == 10)
+            $display(" STEP 4.1 PASS\n");
+        else
+            $display(" STEP 4.1 FAIL\n");
+        
+        // Step 4: BEQ Part 2 Branch Taken
+        repeat (6) @(posedge clk); // 3 instructions
+        
+        $display("\n === STEP 4.2: BEQ Branch Taken TEST ===");
+        $display("x1 = %0d", dut.regfile_inst.regs[1]);
+        $display("x11 = %0d | expected = 0/x (skipped)", dut.regfile_inst.regs[11]);
+        $display("x12 = %0d | expected = 77", dut.regfile_inst.regs[12]);
+        
+        if (dut.regfile_inst.regs[12] == 77)
+            $display(" STEP 4.2 PASS\n");
+        else
+            $display(" STEP 4.2 FAIL\n");
+       
+        
+        $display("\n=== STEP 5: SLT / SLTU TEST ===");
+        $display("x13 (slt  x1 < x2)   = %0d | Expected = 1", dut.regfile_inst.regs[13]);
+        $display("x14 (slt  x2 < x1)   = %0d | Expected = 0", dut.regfile_inst.regs[14]);
+        $display("x15 (addi -1)        = %0d | Expected = -1 or 4294967295", dut.regfile_inst.regs[15]);
+        $display("x16 (addi +1)        = %0d | Expected = 1", dut.regfile_inst.regs[16]);
+        $display("x17 (sltu x15 < x16) = %0d | Expected = 0", dut.regfile_inst.regs[17]);
+        $display("x18 (sltu x16 < x15) = %0d | Expected = 1", dut.regfile_inst.regs[18]);
+        
+        if (dut.regfile_inst.regs[13] == 1 &&
+            dut.regfile_inst.regs[14] == 0 &&
+            dut.regfile_inst.regs[16] == 1 &&
+            dut.regfile_inst.regs[17] == 0 &&
+            dut.regfile_inst.regs[18] == 1)
+            $display(" STEP 5 PASS \n");
+        else
+            $display(" STEP 5 FAIL \n");
+        
         $finish;
     end
+    
 
 endmodule
+
+/*
+Full Program with real-world instructions to test out whole CPU flow:
+
+addi x1, x0, 5       // x1 = 5
+addi x2, x0, 10      // x2 = 10
+add  x3, x1, x2      // x3 = 15
+slt  x4, x1, x2      // x4 = 1
+sltu x5, x2, x1      // x5 = 0
+sw   x3, 0(x0)       // mem[0] = x3 = 15
+lw   x6, 0(x0)       // x6 = mem[0] = 15
+beq  x1, x1, +8      // branch to skip next addi
+addi x7, x0, 99      // should be skipped
+addi x8, x0, 42      // x8 = 42
+
+| Reg | Expected Value | Reason                  |
+| --- | -------------- | ----------------------- |
+| x1  | 5              | addi                    |
+| x2  | 10             | addi                    |
+| x3  | 15             | add                     |
+| x4  | 1              | slt (5 < 10)            |
+| x5  | 0              | sltu (10 !< 5 unsigned) |
+| x6  | 15             | loaded from mem\[0]     |
+| x7  | *Don't Care*   | skipped by branch       |
+| x8  | 42             | executed after branch   |
+
+*/

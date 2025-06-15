@@ -1,12 +1,7 @@
 ## Work in Progress
 This project is under active development. The following components are currently in progress:
 
-| Module       | Description                                   | Status         |
-| ------------ | --------------------------------------------- | -------------- |
-| `cpu_top.v`    | Top-level CPU datapath integration            | 🧪 Integrated & Functionally Testing     |
-| `data_mem.v`  | Data Memory block for loads and stores        | ✅ Tested       |
-| `ml_accel.v` | ML Coprocessor (memory-mapped)                | ✅ Tested w/ SV testbench |
-| `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | 🔜 Not started |
+| `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | All components completed; Awaiting integration |
 
 
 # RISC-V + ML Coprocessor SoC
@@ -72,20 +67,23 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 | `regfile.v`   | 32-register file with dual-read, single-write port | ✅ Tested in Vivado & iverilog |
 | `alu.v`    | Arithmetic Logic Unit (ALU)     | ✅ Tested in Vivado & iverilog |
 | `alu_control.v` | ALU Control Decoder | ✅ Tested in Vivado & iverilog |
-| `control.v` | Main Control Unit (Opcode decoder) | ✅ Tested in Vivado & iverilog |
+| `control.v` | Main Control Unit (Opcode decoder) | ✅ Fully tested in Vivado & iverilog (no JAL yet) |
 | `imm_gen.v` | Immediate Generator (I/S/B/U/J types) | ✅ Tested in Vivado & iverilog |
 | `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
 | `data_mem.v`  | Read-write Data Memory (word-aligned) | ✅ Tested with SystemVerilog    |
-| `cpu_top.v`    | Single-cycle CPU (full datapath)    | 🧪 Integrated, testing `beq`, memory ops |
+| `cpu_top.v`    | Top-level CPU datapath integration            | ✅ Fully Tested in Vivado & iverilog (ALU, Memory, Branches) |
 | `ml_accel.v`  | 4-element dot-product ML accelerator coprocessor | ✅ Tested in Vivado & iverilog |
 
 
 ## 🐞 Known Issues
 
-- ✅ BEQ now correctly calculates the branch offset (imm is left-shifted).
-- ⚠️ Data memory (`mem[5]`) not always visible if PC wraps due to reset — might be due to testbench reset signals.
-- 🚧 Full program execution is ongoing — `x9` is correctly skipped after branch, but more corner cases still need testing (e.g., SLT, shifts).
-- 🔍 No test coverage yet for edge ALU ops like SRA/SRL/SLL or unsigned comparisons.
+- ⚠️ Memory array visibility in testbench limited; observe `read_data` instead.
+- ❌ `jal` instruction not yet implemented in `control.v` or tested.
+
+## ✅ Fixed Issues
+- ✅ BEQ now correctly branches based on `zero` flag and tested with skip logic.
+- ✅ Memory write/read verified using `lw` into x8 and comparing regfile output.
+- ✅ SLT and SLTU functionality confirmed in step 5 of testbench.
 
 ---
 
@@ -105,6 +103,23 @@ The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator
 | 36  | `0x00410663`       | `beq x2, x4, +8` | Branch if x2 == x4 → skip next if false |
 | 40  | `0x06300493`       | `addi x9, x0, 99`| x9 = 99 (should be skipped if branch)   |
 | 44  | `0x0010A533`       | `add x10, x1, x1`| x10 = x1 + x1 = 10                       |
+| 60  | `0x0020A6B3`       | `slt x13, x1, x2` | x13 = (5 < 10) = 1                      |
+| 64  | `0x00112733`       | `slt x14, x2, x1` | x14 = (10 < 5) = 0                      |
+| 68  | `0xFFF00793`       | `addi x15, x0, -1`| x15 = -1                                |
+| 72  | `0x00100813`       | `addi x16, x0, 1` | x16 = 1                                 |
+| 76  | `0x0107B8B3`       | `sltu x17, x15, x16`| x17 = (unsigned -1 < 1) = 1           |
+| 80  | `0x00F83933`       | `sltu x18, x16, x15`| x18 = (unsigned 1 < -1) = 0           |
+
+
+## 🧪 Full CPU Test Program Coverage
+| Step | Instructions Tested                         | Status  |
+|------|----------------------------------------------|---------|
+| 1    | `addi`, `add`                                | ✅ PASS |
+| 2    | `sub`, `and`, `or`, `xor`                    | ✅ PASS |
+| 3    | `sw`, `lw`                                   | ✅ PASS |
+| 4    | `beq` (branch skip behavior)                 | ✅ PASS |
+| 5    | `jal` (jump and link)                        | ❌ Skipped for now|
+| 6    | `slt`, `sltu` (signed/unsigned comparisons)  | ✅ PASS |
 
 ## ▶️ Running Simulations (Linux)
 
@@ -186,3 +201,5 @@ iverilog -g2012 -o ml_accel_test ml_accel_tb.sv ../rtl/ml_accel.v
 ./ml_accel_test
 gtkwave ml_accel.vcd
 ```
+
+> 💡 Tip: You can observe memory effects via `read_data` signal from `data_mem.v` instead of direct access to the `memory` array due to simulation scope limitations.
