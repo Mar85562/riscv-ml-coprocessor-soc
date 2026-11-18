@@ -1,256 +1,200 @@
-## Work in Progress
-This project is under active development. The following components are currently in progress:
+# RISC-V CPU + ML Accelerator SoC
 
-| Module       | Desciption                                    | Status                                         |
----------------|-----------------------------------------------|------------------------------------------------| 
-| `soc_top.v`  | Full SoC wrapper (CPU + Memory + Coprocessor) | All components completed; Awaiting integration |
+A single-cycle RISC-V (RV32I subset) CPU and a memory-mapped dot-product ML accelerator, written in Verilog and verified in simulation with Icarus Verilog.
 
-
-# RISC-V + ML Coprocessor SoC
-
-A custom System-on-Chip (SoC) featuring a minimal RISC-V CPU and a memory-mapped ML accelerator coprocessor. This project is built in Verilog and goes through the full ASIC flow using open-source tools.
+The project is now in **Phase 2**: building a class-based, constrained-random SystemVerilog testbench with functional coverage, then turning the CPU into a 5-stage pipeline.
 
 ---
 
-### 🧩 SoC Top-Level Diagram
+## 📍 Status
 
-![SoC Top Diagram](doc/soc_top_block_diagram.png)
-
-### 🧭 CPU Top-Level Block Diagram
-
-![CPU Top Diagram](doc/cpu_top_block_diagram.png)
-
-### 🧠 ML Accelerator Coprocessor
-
-The `ml_accel.v` module implements a custom **memory-mapped hardware accelerator** that computes the dot product of two 4-element vectors:
-
-`Result = A[0]*B[0] + A[1]*B[1] + A[2]*B[2] + A[3]*B[3]`
-
-
-- Accessible via memory-mapped registers (offsets `0x00–0x24`)
-- Activated by a write to the control register at `0x20`
-- Computation is performed in hardware in a single clock cycle
-- Result is read from address `0x24`, with a `done` flag
-
-**Why use a coprocessor?**
-
-- Offloads repeated or parallelizable computations from the CPU
-- Enables higher throughput in ML workloads (e.g., vector math)
-- Demonstrates modular SoC design with extensible accelerators
-
-
-
-## 📁 Folder Structure
-
-- `rtl/` — RTL Verilog source files  
-- `testbench/` — Testbenches and simulations  
-- `synthesis/` — Yosys synthesis scripts and reports  
-- `openlane/` — ASIC layout with OpenLane  
-- `doc/` — Block diagrams, FSMs, specs  
-- `scripts/` — Custom utilities  
-- `results/` — Waveform and layout screenshots  
+| Area | Status |
+|---|---|
+| Single-cycle CPU (`cpu_top`) | ✅ Implemented. Full-program test passes |
+| ML accelerator (`ml_accel`) | ✅ Implemented and unit-tested |
+| SoC integration (`soc_top`) | ⏳ Designed (memory map below), not yet implemented |
+| Class-based SV testbench + coverage | ⏳ Next |
+| 5-stage pipeline (hazards + forwarding) | 🗓️ Planned |
+| Synthesis / physical design (Yosys, OpenLane, Sky130) | 🗓️ Planned. No results committed yet |
 
 ---
 
-## 🔧 Tools Used
+## 🧭 CPU Architecture
 
-- Verilog, Icarus Verilog, GTKWave  
-- Yosys, OpenLane, Magic VLSI  
-- Python (for optional scripting/testing)
+Single-cycle datapath: every instruction is fetched, decoded, executed and written back in one clock. Only the PC, the register-file write port and data-memory writes are clocked; everything else is combinational.
+
+```mermaid
+flowchart LR
+    PC["pc"] -->|addr| IMEM["instr_mem"]
+    IMEM -->|instr| DEC["decoder"]
+    DEC -->|opcode| CTRL["control"]
+    DEC -->|funct3 / funct7| ALUC["alu_control"]
+    CTRL -->|alu_op| ALUC
+    DEC -->|rs1, rs2, rd| RF["regfile"]
+    IMEM -->|instr| IMM["imm_gen"]
+    RF -->|rs1_data| ALU["alu"]
+    RF -->|rs2_data| MUXB{{"ALUSrc mux"}}
+    IMM -->|imm| MUXB
+    MUXB -->|b| ALU
+    ALUC -->|alu_control| ALU
+    ALU -->|result = address| DMEM["data_mem"]
+    RF -->|rs2_data = store data| DMEM
+    ALU -->|result| WB{{"MemToReg mux"}}
+    DMEM -->|read_data| WB
+    WB -->|write data| RF
+    ALU -->|zero| BR{{"next-PC logic"}}
+    IMM -->|imm| BR
+    BR -->|"PC+4 or PC+imm"| PC
+```
+
+### Two-level decode
+
+`control` looks only at the **opcode** and produces a 2-bit `alu_op`; `alu_control` turns that plus `funct3`/`funct7` into the exact ALU operation.
+
+| `alu_op` | Meaning | Used by |
+|---|---|---|
+| `00` | Always ADD (compute address `rs1 + imm`) | `lw`, `sw` |
+| `01` | Always SUB (zero flag = equal) | `beq` |
+| `10` | Decode `funct3` / `funct7` | R-type, I-type ALU |
+
+### Supported instructions
+
+| Class | Instructions | Notes |
+|---|---|---|
+| R-type | `add sub sll slt sltu xor srl sra or and` | All 10 |
+| I-type ALU | `addi slti sltiu xori ori andi slli srli srai` | See known issue #1 |
+| Load / Store | `lw`, `sw` | Word only |
+| Branch | `beq` | See known issue #2 |
+| Not yet | `lui auipc jal jalr`, byte/half loads & stores | Decode as NOP. `imm_gen` already builds U/J immediates |
 
 ---
 
-## ✅ Modules Implemented
+## 🧠 ML Accelerator (`ml_accel.v`)
 
-| Module        | Description                        | Status                           |
-|---------------|------------------------------------|----------------------------------|
-| `pc.v`        | Program Counter                    | ✅ Tested in Vivado & iverilog   |
-| `instr_mem.v` | Instruction Memory (preloaded ROM) | ✅ Tested in Vivado & iverilog   |
-| `regfile.v`   | 32-register file with dual-read, single-write port | ✅ Tested in Vivado & iverilog |
-| `alu.v`    | Arithmetic Logic Unit (ALU)     | ✅ Tested in Vivado & iverilog |
-| `alu_control.v` | ALU Control Decoder | ✅ Tested in Vivado & iverilog |
-| `control.v` | Main Control Unit (Opcode decoder) | ✅ Fully tested in Vivado & iverilog (no JAL yet) |
-| `imm_gen.v` | Immediate Generator (I/S/B/U/J types) | ✅ Tested in Vivado & iverilog |
-| `decoder.v` | Instruction field extractor (opcode, rs1, rs2, rd, funct3, funct7) | ✅ Tested in Vivado & iverilog |
-| `data_mem.v`  | Read-write Data Memory (word-aligned) | ✅ Tested with SystemVerilog    |
-| `cpu_top.v`    | Top-level CPU datapath integration            | ✅ Fully Tested in Vivado & iverilog (ALU, Memory, Branches) |
-| `ml_accel.v`  | 4-element dot-product ML accelerator coprocessor | ✅ Tested in Vivado & iverilog |
+Computes the dot product of two 4-element vectors: `A[0]·B[0] + A[1]·B[1] + A[2]·B[2] + A[3]·B[3]`.
 
+| Offset | Register |
+|---|---|
+| `0x00 – 0x0C` | Vector A[0..3] |
+| `0x10 – 0x1C` | Vector B[0..3] |
+| `0x20` | Control: any write starts the computation |
+| `0x24` | Result (read) |
 
-## 🐞 Known Issues
-
-- ⚠️ Memory array visibility in testbench limited; observe `read_data` instead.
-- ❌ `jal` instruction not yet implemented in `control.v` or tested.
-
-## ✅ Fixed Issues
-- ✅ Full program execution verified — final testbench confirms ALU, branch, memory, and comparison behavior.
-- ✅ BEQ now correctly branches based on `zero` flag and tested with skip logic.
-- ✅ Memory write/read verified using `lw` into x8 and comparing regfile output.
-- ✅ SLT and SLTU functionality confirmed in step 5 of testbench.
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> COMPUTE: write to 0x20
+    COMPUTE --> DONE: result latched, done = 1
+    DONE --> IDLE: done = 0
+```
 
 ---
 
-## 🧪 CPU Testbenches
+## 🧩 SoC Integration (planned)
 
-Two main testbenches were used to verify `cpu_top.v`:
+Today `data_mem` lives inside `cpu_top` and `ml_accel` is standalone. The plan for `soc_top` is to bring the memory bus out of the CPU and add an **address decoder**:
 
-### 1️⃣ Step-by-Step Unit Testbench (Commented Out)
-
-- Located in `cpu_top_tb.sv` (commented out at top of file)
-- Contains structured testing for:
-  - ADDI + ADD
-  - ALU ops: SUB, AND, OR, XOR
-  - Memory ops: SW + LW
-  - Branching: BEQ taken / not taken
-  - Comparisons: SLT, SLTU, signed/unsigned logic
-- Displays each register’s output and compares it to expected values
-
-### 📜 Instruction Log for Step-by-Step (Test Program in `instr_mem.v`, commented out)
-
-| PC  | Instruction        | Assembly         | Description                             |
-|-----|--------------------|------------------|-----------------------------------------|
-| 0   | `0x00500093`       | `addi x1, x0, 5` | x1 = 5                                  |
-| 4   | `0x00A00113`       | `addi x2, x0, 10`| x2 = 10                                 |
-| 8   | `0x002081B3`       | `add x3, x1, x2` | x3 = x1 + x2 = 15                        |
-| 12  | `0x40110233`       | `sub x4, x2, x1` | x4 = x2 - x1 = 5                         |
-| 16  | `0x0020A2B3`       | `and x5, x1, x2` | x5 = x1 & x2 = 0                         |
-| 20  | `0x0020B333`       | `or x6, x1, x2`  | x6 = x1 | x2 = 15                        |
-| 24  | `0x0020C3B3`       | `xor x7, x1, x2` | x7 = x1 ^ x2 = 15                        |
-| 28  | `0x0070A023`       | `sw x7, 0(x1)`   | mem[x1+0] = x7 = 15                      |
-| 32  | `0x0000A403`       | `lw x8, 0(x1)`   | x8 = mem[x1+0] → should get 15          |
-| 36  | `0x00410663`       | `beq x2, x4, +8` | Branch if x2 == x4 → skip next if false |
-| 40  | `0x06300493`       | `addi x9, x0, 99`| x9 = 99 (should be skipped if branch)   |
-| 44  | `0x0010A533`       | `add x10, x1, x1`| x10 = x1 + x1 = 10                       |
-| 60  | `0x0020A6B3`       | `slt x13, x1, x2` | x13 = (5 < 10) = 1                      |
-| 64  | `0x00112733`       | `slt x14, x2, x1` | x14 = (10 < 5) = 0                      |
-| 68  | `0xFFF00793`       | `addi x15, x0, -1`| x15 = -1                                |
-| 72  | `0x00100813`       | `addi x16, x0, 1` | x16 = 1                                 |
-| 76  | `0x0107B8B3`       | `sltu x17, x15, x16`| x17 = (unsigned -1 < 1) = 1           |
-| 80  | `0x00F83933`       | `sltu x18, x16, x15`| x18 = (unsigned 1 < -1) = 0           |
-
-### 2️⃣ Final Full-Flow Testbench
-
-- Same file: `cpu_top_tb.sv` (active code at bottom)
-- Executes a realistic instruction sequence:
-  ```assembly
-  addi x1, x0, 5
-  addi x2, x0, 10
-  add  x3, x1, x2
-  slt  x4, x1, x2
-  sltu x5, x2, x1
-  sw   x3, 0(x0)
-  lw   x6, 0(x0)
-  beq  x1, x1, +8  // skips next
-  addi x7, x0, 99  // should be skipped
-  addi x8, x0, 42
-
-
-### 📜 Instruction Log for FULL PROGRAM (Test Program in `instr_mem.v`)
-
-| PC  | Instruction        | Assembly            | Description                                 |
-|-----|--------------------|---------------------|---------------------------------------------|
-| 0   | `0x00500093`       | `addi x1, x0, 5`    | x1 = 5                                      |
-| 4   | `0x00A00113`       | `addi x2, x0, 10`   | x2 = 10                                     |
-| 8   | `0x002081B3`       | `add x3, x1, x2`    | x3 = x1 + x2 = 15                            |
-| 12  | `0x0020A233`       | `slt x4, x1, x2`    | x4 = (5 < 10) = 1                            |
-| 16  | `0x001132B3`       | `sltu x5, x2, x1`   | x5 = (10 < 5) = 0 (unsigned)                 |
-| 20  | `0x00302023`       | `sw x3, 0(x0)`      | mem[0] = x3 = 15                             |
-| 24  | `0x00002303`       | `lw x6, 0(x0)`      | x6 = mem[0] = 15                             |
-| 28  | `0x00108463`       | `beq x1, x1, +8`    | Branch taken — skip next                    |
-| 32  | `0x06300393`       | `addi x7, x0, 99`   | x7 = 99 (skipped by branch)                 |
-| 36  | `0x02A00413`       | `addi x8, x0, 42`   | x8 = 42                                     |
-
-
-## 🧪 Full CPU Test Program Coverage
-| Step | Instructions Tested                         | Status  |
-|------|----------------------------------------------|---------|
-| 1    | `addi`, `add`                                | ✅ PASS |
-| 2    | `sub`, `and`, `or`, `xor`                    | ✅ PASS |
-| 3    | `sw`, `lw`                                   | ✅ PASS |
-| 4    | `beq` (branch skip behavior)                 | ✅ PASS |
-| 6    | `slt`, `sltu` (signed/unsigned comparisons)  | ✅ PASS |
-
-## ▶️ Running Simulations (Linux)
-
-### ▶️ Simulate the PC module:
-```bash
-cd testbench
-iverilog -o pc_test pc_tb.v ../rtl/pc.v
-./pc_test
-gtkwave pc.vcd
+```mermaid
+flowchart LR
+    CPU["cpu_top"] -->|"addr, wdata, mem_read, mem_write"| DECODE{{"address decoder<br/>addr[8]"}}
+    DECODE -->|"addr[8] = 0"| DMEM["data_mem<br/>0x000 – 0x0FF"]
+    DECODE -->|"addr[8] = 1"| ACC["ml_accel<br/>0x100 – 0x1FF"]
+    DMEM -->|rdata| RMUX{{"read-data mux"}}
+    ACC -->|rdata| RMUX
+    RMUX -->|load data| CPU
 ```
 
-### ▶️ Simulate the Instruction Memory module
-```bash
-cd testbench
-iverilog -o instr_mem_test instr_mem_tb.v ../rtl/instr_mem.v
-./instr_mem_test
-gtkwave instr_mem.vcd
+| Address range | Device |
+|---|---|
+| `0x000 – 0x0FF` | Data memory (64 × 32-bit words) |
+| `0x100 – 0x1FF` | ML accelerator (offsets above) |
+
+Only the selected device receives the read/write enable. Without the decoder, `data_mem` keeps only `addr[7:2]`, so `0x120` would alias onto the same word as `0x020`.
+
+---
+
+## 🧪 Verification
+
+### Current (directed tests, Icarus Verilog)
+
+| Testbench | Style | What it covers |
+|---|---|---|
+| `alu_tb.sv` | Self-checking | All 10 ALU ops, one vector each |
+| `alu_control_tb.sv` | Self-checking | Every `alu_op` / `funct3` / `funct7` combination used |
+| `control_tb.sv` | Self-checking | Control signals for each opcode class + unknown opcode |
+| `cpu_top_tb.sv` | Self-checking | 10-instruction program (ALU ops, `slt/sltu`, `sw/lw`, taken `beq`). Checks final register values |
+| `pc_tb`, `regfile_tb`, `instr_mem_tb`, `decoder_tb`, `imm_gen_tb`, `data_mem_tb`, `ml_accel_tb` | Print-only | Results checked by inspection / waveforms |
+
+### Planned: class-based constrained-random testbench
+
+```mermaid
+flowchart LR
+    GEN["generator<br/>constrained-random<br/>instructions"] --> DRV["driver"]
+    DRV --> DUT["CPU (DUT)"]
+    DUT --> MON["monitor"]
+    MON --> SB["scoreboard"]
+    REF["reference model<br/>ISA-level"] --> SB
+    MON --> COV["functional coverage<br/>opcode × funct3, imm ranges,<br/>x0, branch taken / not taken"]
 ```
 
-### ▶️ Simulate the Register File Module
-```bash
-cd testbench
-iverilog -o regfile_test regfile_tb.v ../rtl/regfile.v
-./regfile_test
-gtkwave regfile.vcd
-```
-### ▶️ Simulate the ALU Module
+Goals: per-instruction checking against a reference model (not just end-of-test register state), and **coverage-driven closure**.
+
+### 🐞 Known issues (found during verification review)
+
+1. **`addi` with immediate 1024–1055 executes as SUB.** I-type instructions reuse `alu_control`'s `funct7` check, but for I-type those bits are part of the immediate. A directed test with small constants never hit it, which is exactly the kind of hole functional coverage is meant to expose.
+2. **All branches behave as `beq`.** The next-PC logic ignores `funct3`, so `bne`/`blt`/`bge`/`bltu`/`bgeu` are not implemented correctly.
+
+Both will get a failing test in the new testbench **before** the RTL fix.
+
+---
+
+## ▶️ Running Simulations
+
+Requires [Icarus Verilog](https://steveicarus.github.io/iverilog/) (and optionally GTKWave). Run from the repository root.
+
+**Full CPU test:**
 
 ```bash
-cd testbench
-iverilog -g2012 -o alu_test alu_tb.sv ../rtl/alu.v
-./alu_test > alu_output.txt
-gtkwave alu.vcd
-```
-### ▶️ Simulate the ALU Control Module
-```bash
-cd testbench
-iverilog -g2012 -o alu_control_test alu_control_tb.sv ../rtl/alu_control.v
-./alu_control_test > alu_control_output.txt
-gtkwave alu_control.vcd
-```
-### ▶️ Simulate the Main Control Unit Module
-```bash
-cd testbench
-iverilog -g2012 -o control_test control_tb.sv ../rtl/control.v
-./control_test > control_output.txt
-gtkwave control.vcd
-```
-### ▶️ Simulate the Immediate Generator Module
-```bash
-cd testbench
-iverilog -g2012 -o imm_gen_test imm_gen_tb.sv ../rtl/imm_gen.v
-./imm_gen_test
-```
-### ▶️ Simulate Decoder Module
-```bash
-cd testbench
-iverilog -g2012 -o decoder_test decoder_tb.sv ../rtl/decoder.v
-./decoder_test > decoder_output.txt
-gtkwave decoder.vcd
-```
-### ▶️ Simulate Data Memory Module
-```bash
-cd testbench
-iverilog -g2012 -o data_mem_test data_mem_tb.sv ../rtl/data_mem.v
-./data_mem_test
+iverilog -g2012 -o cpu_test testbench/cpu_top_tb.sv rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
+vvp cpu_test | tail -12
 ```
 
-> 💡 Tip: You can observe memory effects via `read_data` signal from `data_mem.v` instead of direct access to the `memory` array due to simulation scope limitations.
+Expected: `FINAL PROGRAM PASS`.
 
-### ▶️ Simulate the CPU Top Module
+**Single module** (example: ALU). Swap in any `testbench/<module>_tb.*` and `rtl/<module>.v`:
+
 ```bash
-iverilog -g2012 -o cpu_test \
-    testbench/cpu_top_tb.sv \
-    rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v \
-    rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v
-```
-### ▶️ Simulate the ML Accelerator Module
-```bash
-cd testbench
-iverilog -g2012 -o ml_accel_test ml_accel_tb.sv ../rtl/ml_accel.v
-./ml_accel_test
-gtkwave ml_accel.vcd
+iverilog -g2012 -o alu_test testbench/alu_tb.sv rtl/alu.v
+vvp alu_test
 ```
 
+Testbenches dump a `.vcd` for GTKWave (`gtkwave alu.vcd`). Simulation outputs are gitignored.
+
+---
+
+## 📁 Repository Structure
+
+```
+rtl/          Verilog RTL (CPU modules, ml_accel; soc_top.v is a placeholder)
+testbench/    One testbench per module + cpu_top_tb.sv
+doc/          Diagrams (cpu_top_block_diagram.png is the original Graphviz datapath)
+synthesis/    Yosys flow (planned)
+openlane/     OpenLane / Sky130 flow (planned)
+scripts/      Utilities (planned)
+results/      Waveforms and reports (planned)
+```
+
+---
+
+## 🗺️ Roadmap
+
+1. ✅ Single-cycle CPU + accelerator RTL with directed tests
+2. ⏳ Class-based SystemVerilog testbench: transaction, generator, driver, monitor, scoreboard + reference model, functional coverage
+3. Fix known issues test-first; extend ISA (`bne`/`blt`…, `lui`, `jal`/`jalr`)
+4. `soc_top`: CPU ↔ accelerator over the memory map
+5. 5-stage pipeline with hazard detection and forwarding (regression-tested with the new testbench)
+6. Stretch: branch prediction or a small cache; Yosys / OpenLane flow on Sky130
+
+## 🔧 Tools
+
+Verilog / SystemVerilog · Icarus Verilog · GTKWave · Vivado (early unit tests) · planned: a class-capable SV simulator, Yosys, OpenLane (Sky130)

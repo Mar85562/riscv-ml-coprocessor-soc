@@ -20,6 +20,8 @@ This file is the single source of truth for continuing work in a new chat. Read 
 ## Sync rules (do these every time)
 - Whenever this file changes, **replace the whole content** of the Notion page **CLAUDE.md Backup** with this file's content (same page, never a new copy): https://app.notion.com/p/41cc924517a281ecbeacd0b1e517244c
 - At the end of each session (or when something notable happens), add terse bullets under a dated heading (newest first) on **Session Notes**: https://app.notion.com/p/41cc924517a281abbff5e4195000bbb3 — few words, insights/bugs/decisions only.
+- **At the end of every work session, update `README.md`** (Status table, Known issues, Verification, Roadmap) so it matches the current state. README uses Mermaid diagrams; keep them accurate to the RTL. Don't use the textbook figure `doc/Datapath.jpg` (P&H Fig 4.21, copyrighted) or the AI-made `doc/soc_top_block_diagram.png` (typos, wrong topology); both are no longer referenced.
+- Commits: ask the user before committing/merging CLAUDE.md or README changes to main (they've approved this flow each time so far; never push).
 - Keep the **Status** callout and **Task Tracker** on the Notion project root current: https://app.notion.com/p/1f0c924517a2809495e4c79022b4cabc (ASIC DESIGN PROJECT, under Academics & Research → Projects).
 
 ## Tutoring plan & current position
@@ -33,7 +35,7 @@ This file is the single source of truth for continuing work in a new chat. Read 
    - ✅ L5 ALU + alu_control: user found the addi-1030 bug. Fix concept agreed: give alu_control `opcode[5]` (R=1, I=0) (or a distinct alu_op for I-type); I-type ignores funct7 except funct3=101 (srli/srai; shamt is only imm[4:0], so imm[11:5] is free to act as funct7).
    - ✅ L6 data_mem: byte address → word index = addr[7:2] (÷4 drops [1:0]; 64 words = 6 bits; bits ≥8 dropped → aliasing every 256 B, e.g. 0x120 and 0x020 both hit index 8). User needed the decimal "÷4 then wrap at 64, like a clock" explanation to click.
    - ✅ L7 accel hookup (concept only): memory map 0x000–0x0FF data_mem, 0x100–0x1FF ml_accel (matches program.hex); decoder uses `addr[8]`; route enables to selected device only; mux read data back; accel gets low 6 address bits. User needed the "compare range edges bit-by-bit" method to find the select bit.
-3. **NEXT → Refresh verification:** what's tested vs not; what a class-based TB must check; simulator choice (Icarus lacks SV class/constraint/covergroup support → Verilator 5.x (partial), or free tools: Questa Intel FPGA edition, Vivado xsim, EDA Playground); short ordered plan.
+3. **IN PROGRESS → Refresh verification.** Part 1 taught 2026-11-18 (directed tests; self-checking vs print-only; cpu_top_tb checks regs only once at end). **Open question (unanswered, resume here):** name a bug that happens mid-program but leaves final regs correct (e.g. reg written wrong then overwritten, wrong store address since memory isn't checked, skipped instr x7 written) → motivates per-instruction monitor + scoreboard. Remaining parts: what's tested vs not; what a class-based TB must check; simulator choice (Icarus lacks SV class/constraint/covergroup support → Verilator 5.x (partial), or free tools: Questa Intel FPGA edition, Vivado xsim, EDA Playground); short ordered plan.
 4. Three warm-up SV exercises (e.g. self-checking ALU / regfile tests); review user's code with guiding questions.
 5. Architecture enhancements (only after TB works): plan → user implements → review.
 
