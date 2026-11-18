@@ -36,3 +36,7 @@ __pycache__/
 
 # Misc
 *~
+.DS_Store
+
+# Claude Code session data (worktrees, local settings)
+.claude/
