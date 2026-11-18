@@ -24,15 +24,16 @@ This file is the single source of truth for continuing work in a new chat. Read 
 
 ## Tutoring plan & current position
 1. Orient (done 2026-10-17)
-2. Refresh design, one lesson + one question each — **IN PROGRESS**
+2. Refresh design, one lesson + one question each — **DONE 2026-11-18**
    - ✅ L1 life of an instruction (`add`), control signals for `lw` vs `add` (4 differ: alu_op, mem_read, alu_src, mem_to_reg)
    - ✅ Refresher: register fields (rs1/rs2/rd 5-bit), x0
    - ✅ L2 register file (x0: read-side mux is what guarantees 0; write guard alone fails since no reset)
    - ✅ L3 PC + branch (`branch && zero`); user found bne acts as beq; fix idea = route funct3 into next-PC, invert zero for bne. Teaser left open: blt can't use zero flag (hint: SLT).
    - ✅ L4 imm_gen (formats, sign-extend from bit 31, B-type implicit bit0 → doubles reach, negative offsets)
-   - ⏳ L5 ALU + alu_control: user found the addi-1030 bug. **Open question to user:** what extra info lets alu_control separate R-type from I-type while keeping `srai` working? (Hint given: compare opcodes 0110011 vs 0010011 → bit 5.) User paused before answering to set up Notion/CLAUDE.md.
-   - Next: data_mem, then how ml_accel would connect (soc_top/address decode), then Step 3.
-3. Refresh verification: what's tested vs not; what a class-based TB must check; simulator choice (Icarus lacks SV class/constraint/covergroup support → Verilator 5.x (partial), or free tools: Questa Intel FPGA edition, Vivado xsim, EDA Playground); short ordered plan.
+   - ✅ L5 ALU + alu_control: user found the addi-1030 bug. Fix concept agreed: give alu_control `opcode[5]` (R=1, I=0) (or a distinct alu_op for I-type); I-type ignores funct7 except funct3=101 (srli/srai; shamt is only imm[4:0], so imm[11:5] is free to act as funct7).
+   - ✅ L6 data_mem: byte address → word index = addr[7:2] (÷4 drops [1:0]; 64 words = 6 bits; bits ≥8 dropped → aliasing every 256 B, e.g. 0x120 and 0x020 both hit index 8). User needed the decimal "÷4 then wrap at 64, like a clock" explanation to click.
+   - ✅ L7 accel hookup (concept only): memory map 0x000–0x0FF data_mem, 0x100–0x1FF ml_accel (matches program.hex); decoder uses `addr[8]`; route enables to selected device only; mux read data back; accel gets low 6 address bits. User needed the "compare range edges bit-by-bit" method to find the select bit.
+3. **NEXT → Refresh verification:** what's tested vs not; what a class-based TB must check; simulator choice (Icarus lacks SV class/constraint/covergroup support → Verilator 5.x (partial), or free tools: Questa Intel FPGA edition, Vivado xsim, EDA Playground); short ordered plan.
 4. Three warm-up SV exercises (e.g. self-checking ALU / regfile tests); review user's code with guiding questions.
 5. Architecture enhancements (only after TB works): plan → user implements → review.
 
