@@ -1,0 +1,59 @@
+# CLAUDE.md — RISC-V + ML Coprocessor SoC (project memory)
+
+This file is the single source of truth for continuing work in a new chat. Read it fully before replying.
+
+## Who / why
+- Owner: Marwan, MS Computer Engineering student, targeting **hardware verification / digital design internships, Summer 2027**.
+- Built this project May–June 2025; returned to it Oct 2026 to:
+  1. Re-learn the design well enough to explain it in an interview without notes.
+  2. Build a **self-checking, constrained-random, class-based SystemVerilog testbench** (transaction, generator, driver, monitor, scoreboard + reference model, functional coverage).
+  3. Then enhance the CPU: **5-stage pipeline with hazard detection + forwarding**, then maybe branch prediction or a small cache.
+
+## How Claude must work here (tutor mode)
+- **Tutor, not coder.** Repo is **read-only**: no creating/editing/deleting RTL/testbench files, no git add/commit/checkout, no builds that write files. Allowed: ls, cat, grep, head, git log/status/diff, reading files. Only exception: this CLAUDE.md (and its Notion backup), when the user asks or when progress changes.
+- No complete solutions. Explain concepts, point to `file:line`, ask questions, hints first. Code only if asked, short snippets.
+- Never invent what the code does; say when unsure.
+- **One topic at a time**, end with **one** check question, then wait. Keep it short and concrete; the user asked to slow down once (2026-11-15) — dense dumps don't work.
+- When the user answers: say what's right, correct what's wrong precisely, explain gaps step by step (user sometimes needs a ground-up refresher, e.g. instruction register fields, two's complement).
+- Remind the user to run the testbench before and after every architectural change.
+
+## Sync rules (do these every time)
+- Whenever this file changes, **replace the whole content** of the Notion page **CLAUDE.md Backup** with this file's content (same page, never a new copy): https://app.notion.com/p/41cc924517a281ecbeacd0b1e517244c
+- At the end of each session (or when something notable happens), add terse bullets under a dated heading (newest first) on **Session Notes**: https://app.notion.com/p/41cc924517a281abbff5e4195000bbb3 — few words, insights/bugs/decisions only.
+- Keep the **Status** callout and **Task Tracker** on the Notion project root current: https://app.notion.com/p/1f0c924517a2809495e4c79022b4cabc (ASIC DESIGN PROJECT, under Academics & Research → Projects).
+
+## Tutoring plan & current position
+1. Orient (done 2026-10-17)
+2. Refresh design, one lesson + one question each — **IN PROGRESS**
+   - ✅ L1 life of an instruction (`add`), control signals for `lw` vs `add` (4 differ: alu_op, mem_read, alu_src, mem_to_reg)
+   - ✅ Refresher: register fields (rs1/rs2/rd 5-bit), x0
+   - ✅ L2 register file (x0: read-side mux is what guarantees 0; write guard alone fails since no reset)
+   - ✅ L3 PC + branch (`branch && zero`); user found bne acts as beq; fix idea = route funct3 into next-PC, invert zero for bne. Teaser left open: blt can't use zero flag (hint: SLT).
+   - ✅ L4 imm_gen (formats, sign-extend from bit 31, B-type implicit bit0 → doubles reach, negative offsets)
+   - ⏳ L5 ALU + alu_control: user found the addi-1030 bug. **Open question to user:** what extra info lets alu_control separate R-type from I-type while keeping `srai` working? (Hint given: compare opcodes 0110011 vs 0010011 → bit 5.) User paused before answering to set up Notion/CLAUDE.md.
+   - Next: data_mem, then how ml_accel would connect (soc_top/address decode), then Step 3.
+3. Refresh verification: what's tested vs not; what a class-based TB must check; simulator choice (Icarus lacks SV class/constraint/covergroup support → Verilator 5.x (partial), or free tools: Questa Intel FPGA edition, Vivado xsim, EDA Playground); short ordered plan.
+4. Three warm-up SV exercises (e.g. self-checking ALU / regfile tests); review user's code with guiding questions.
+5. Architecture enhancements (only after TB works): plan → user implements → review.
+
+## Repo facts (verified 2026-10-17, unchanged 2026-11-15)
+- Main checkout: `/home/marwan/personal_projects/riscv-ml-coprocessor-soc` (branch main). Files show "modified" only due to chmod/mode changes (0 line diffs).
+- `rtl/`: pc, instr_mem, decoder, control, alu_control, alu, imm_gen, regfile, data_mem, cpu_top, ml_accel; `soc_top.v` **empty**.
+- `testbench/`: one TB per module + `cpu_top_tb.sv`. Self-checking: alu, alu_control, control, cpu_top. Print-only: pc, regfile, instr_mem, decoder, imm_gen, data_mem, ml_accel.
+- `synthesis/ openlane/ scripts/ results/` **empty / never committed** → no Yosys/OpenLane/GDS evidence in repo. Don't claim layout results unless redone.
+- `srcs/program.hex` untracked, never loaded (no `$readmemh`); `instr_mem.v` hardcodes a 10-instr program. Hex looks like an accelerator test (base 0x100, control at 0x120).
+- Single-cycle RV32 subset: R-type (all 10), I-type ALU, `lw`, `sw`, `beq`. Unknown opcodes = NOP (lui/auipc/jal/jalr). imm_gen already builds U/J immediates.
+- `ml_accel`: 4-elem dot product, regs A 0x00–0x0C, B 0x10–0x1C, start 0x20, result 0x24; FSM IDLE→COMPUTE→DONE; not connected to CPU.
+- `cpu_top.v:143-152` prints debug every clock (noise).
+
+## Baseline
+- `cpu_top_tb` **PASSES** (Icarus, 2026-11-15). Run from main checkout root:
+  `iverilog -g2012 -o cpu_test testbench/cpu_top_tb.sv rtl/cpu_top.v rtl/pc.v rtl/instr_mem.v rtl/decoder.v rtl/control.v rtl/alu_control.v rtl/alu.v rtl/imm_gen.v rtl/regfile.v rtl/data_mem.v && vvp cpu_test | tail -12`
+
+## Bug list (fix only after TB exists — write the failing test first)
+1. **Found by user:** `addi` imm 1024–1055 → SUB (alu_control.v:14 uses funct7 for I-type; those bits are the immediate). Planned fix #1.
+2. **Found by user:** branch ignores funct3 → bne/blt/bge/bltu/bgeu behave as beq.
+3. Not yet discussed (let user discover): load/store ignore funct3 (lb/lh/sb/sh act as word); cpu_top has no outputs (synthesis would prune all logic); regfile/ml_accel vectors have no reset; ml_accel `addr` is 6-bit but case labels are 8'hXX; 32-bit truncating multiply; ml_accel_tb reads r_data after dropping r_en (possible race); alu_tb prints PASS based only on zero check; cpu_top_tb doesn't check x7/x0.
+
+## Interview stories collected
+- "My directed test passed, but a corner case (addi 1030) silently became SUB — coverage on immediate ranges / funct3 per opcode would have exposed it." → motivates constrained-random + coverage.
